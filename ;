@@ -45,10 +45,11 @@ int	main(void)
 		{
 			ptrace(PTRACE_GETREGS, child, NULL, &regs);
 			ins = ptrace(PTRACE_PEEKTEXT, child, regs.rip, NULL);
-			syscall = ptrace(PTRACE_PEEKDATA, child, sizeof(long) * regs.orig_rax);
+			syscall = ptrace(PTRACE_PEEKUSER, child, sizeof(long)*regs.orig_rax);
 			if (old != regs.rip)
 			{
-				printf("syscall (%lu)", syscall);
+				printf("rip : 0x%llx", regs.rip);
+				printf("syscall #%llu", syscall);
 				printf("ins -> %lx\n", ins);
 				//printf("rax -> %llu\n", regs.rax);
 				//printf("rsp -> %llu\n", regs.rsp);
