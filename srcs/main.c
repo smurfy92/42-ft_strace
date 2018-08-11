@@ -14,6 +14,8 @@
 #include <sys/ptrace.h>
 #include <sys/user.h>
 #include <sys/wait.h>
+#include <sys/reg.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 #include <stdio.h>
 
@@ -22,7 +24,6 @@
 int	main(void)
 {
 	pid_t			child;
-	unsigned long int	old;
 
 	child = fork();
 	if (child == 0)
@@ -34,32 +35,28 @@ int	main(void)
 	} 
 	else 
 	{
-		int		status;
-		struct user_regs_struct	regs;
-		long ins;
-		long syscall;
+		int status;
+		struct user_regs_struct regs;
+		unsigned long int old;
 
+		status = 0;
 		old = 0;
-		wait(&status);
 		while (42)
 		{
-			ptrace(PTRACE_GETREGS, child, NULL, &regs);
-			ins = ptrace(PTRACE_PEEKTEXT, child, regs.rip, NULL);
-			syscall = ptrace(PTRACE_PEEKDATA, child, sizeof(long) * regs.orig_rax);
+			ptrace(PTRACE_SYSCALL, child, NULL, NULL);
+			waitpid(child, &status, 0);
+			ptrace(PTRACE_GETREGS, child , NULL, &regs);
 			if (old != regs.rip)
 			{
-				printf("syscall (%lu)", syscall);
-				printf("ins -> %lx\n", ins);
-				//printf("rax -> %llu\n", regs.rax);
-				//printf("rsp -> %llu\n", regs.rsp);
-				//printf("rbp -> %llu\n", regs.rbp);
-				//printf("rdi -> %llu\n", regs.rdi);
+				if ((int)regs.orig_rax == SYS_access)
+					printf("access\n");
+				else
+					printf("not access\n");
 				old = regs.rip;
+
 			}
-			ptrace(PTRACE_SYSCALL, child , NULL, NULL);
-			waitpid(child, &status, 0);
 			if (WIFEXITED(status))
-				break;
+				break ;
 		}
 	}
 	return (0);
