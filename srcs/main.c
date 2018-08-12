@@ -40,7 +40,6 @@ int	main(void)
 			if (old != regs.rip)
 			{
 				printf("%s\n", get_syscall_name(regs.orig_rax));
-
 				old = regs.rip;
 
 			}
