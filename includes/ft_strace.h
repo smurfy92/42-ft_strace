@@ -6,6 +6,7 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 #include <stdio.h>
+#include "../libft/includes/libft.h"
 
 
 char *get_syscall_name(int key);
