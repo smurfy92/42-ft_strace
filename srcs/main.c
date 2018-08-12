@@ -10,16 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <sys/types.h>
-#include <sys/ptrace.h>
-#include <sys/user.h>
-#include <sys/wait.h>
-#include <sys/reg.h>
-#include <sys/syscall.h>
-#include <unistd.h>
-#include <stdio.h>
-
-
+#include "../includes/ft_strace.h"
 
 int	main(void)
 {
@@ -48,10 +39,8 @@ int	main(void)
 			ptrace(PTRACE_GETREGS, child , NULL, &regs);
 			if (old != regs.rip)
 			{
-				if ((int)regs.orig_rax == SYS_access)
-					printf("access\n");
-				else
-					printf("not access\n");
+				printf("%s\n", get_syscall_name(regs.orig_rax));
+
 				old = regs.rip;
 
 			}
