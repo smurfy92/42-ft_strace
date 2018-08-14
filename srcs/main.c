@@ -35,7 +35,7 @@ void 	get_data(int child, long reg, int flag)
 		temp += 8;
 	}
 
-	message[temp - message] = 0;
+	message[temp - message -1 ] = 0;
 	if (flag)
 		printf(", ");
 	if (!errno)
@@ -76,21 +76,21 @@ int	main(void)
 			long r10;
 			wait_for_syscall(child , &status);
 			ptrace(PTRACE_GETREGS, child , NULL, &regs);
-			rax = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rax, NULL);
-			rdi = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rdi, NULL);
-			rsi = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rsi, NULL);
-			rdx = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rdx, NULL);
-			r10 = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.r10, NULL);
 			if (flag == 0)
 			{
 				flag = 1;
+			//	printf("rsi -> %ld old rsi -> %ld\n", rsi , old_rsi);
+				rax = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rax, NULL);
 				printf("%s(", get_syscall_name(regs.orig_rax));
+				rdi = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rdi, NULL);
 				(rdi) ? (get_data(child, rdi, 0)) : printf("0");
+				rsi = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rsi, NULL);
 				(rsi) ? (get_data(child, rsi, 1)) : 0;
+				rdx = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rdx, NULL);
 				(rdx) ? (get_data(child, rdx, 1)) : 0;
+				r10 = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.r10, NULL);
 				(r10) ? (get_data(child, r10, 1)) : 0;
 				printf(") => %ld\n", rax);
-
 			}
 			else
 			{
