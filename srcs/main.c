@@ -19,36 +19,31 @@ void	wait_for_syscall(int child, int *status){
 	waitpid(child, status, 0);
 
 }
-void get_text(int child)
+
+void 	get_data(int child, long reg, int flag)
 {
 	long res;
+	char message[1000];
+	char *temp;
+	int i = -1;
 
-	res = ptrace(PTRACE_PEEKUSER, child, 8 * RSI, NULL);
-	
-	if (errno)
-		printf("errno set");
-	printf(" res -> %ld\n", res);
-}
+	temp = message;
+	while (++i < 4)
+	{
+		res = ptrace(PTRACE_PEEKDATA, child, reg + i * 8, NULL);
+		ft_memcpy(temp, &res, 8);
+		temp += 8;
+	}
 
-int validate_hex(const char* hex)
-{
-  while(*hex != 0){
-    if(*hex < '0' || *hex > '9')
-      return 0;
-    if(*hex < 'A' || *hex > 'F')
-      return 0;
-    hex++;
-  }
-  return 1;
-}
-
-void  print_reg(long t)
-{
-	if (validate_hex((char *)t))
-		printf(", %p", (void *)t);
+	message[temp - message] = 0;
+	if (flag)
+		printf(", ");
+	if (!errno)
+		printf("\"%s\"", message);
 	else
-		printf(", %ld", t);
+		printf("%ld", reg);
 }
+
 
 int	main(void)
 {
@@ -90,10 +85,10 @@ int	main(void)
 			{
 				flag = 1;
 				printf("%s(", get_syscall_name(regs.orig_rax));
-				(rdi) ? (printf("%ld", rdi)) : printf("0");
-				(rsi) ? (printf(", %ld", rsi)) : 0;
-				(rdx) ? (printf(", %ld", rdx)) : 0;
-				(r10) ? (printf(", %ld", r10)) : 0;
+				(rdi) ? (get_data(child, rdi, 0)) : printf("0");
+				(rsi) ? (get_data(child, rsi, 1)) : 0;
+				(rdx) ? (get_data(child, rdx, 1)) : 0;
+				(r10) ? (get_data(child, r10, 1)) : 0;
 				printf(") => %ld\n", rax);
 
 			}
