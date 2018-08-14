@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "../includes/ft_strace.h"
+#include <errno.h>
 
 void	wait_for_syscall(int child, int *status){
 
@@ -18,31 +19,44 @@ void	wait_for_syscall(int child, int *status){
 	waitpid(child, status, 0);
 
 }
-char *get_text(int child, struct user_regs_struct regs)
+void get_text(int child)
 {
-	unsigned int i = -1;
 	long res;
-	char *temp = malloc(1000);
-	char *temp2 = NULL;
 
-	temp2 = temp;
-	while (++i < regs.rdx )
-	{
-		res = ptrace(PTRACE_PEEKDATA, child, regs.rdi, NULL);
-		ft_memcpy(temp2, &res, 8);
-		temp2 += sizeof(long);
-	}
-	temp[regs.rdx] = 0;
-	printf("temp -> %s", temp);
-	return (temp);
+	res = ptrace(PTRACE_PEEKUSER, child, 8 * RSI, NULL);
 	
+	if (errno)
+		printf("errno set");
+	printf(" res -> %ld\n", res);
+}
+
+int validate_hex(const char* hex)
+{
+  while(*hex != 0){
+    if(*hex < '0' || *hex > '9')
+      return 0;
+    if(*hex < 'A' || *hex > 'F')
+      return 0;
+    hex++;
+  }
+  return 1;
+}
+
+void  print_reg(long t)
+{
+	if (validate_hex((char *)t))
+		printf(", %p", (void *)t);
+	else
+		printf(", %ld", t);
 }
 
 int	main(void)
 {
 	pid_t			child;
 	int status;
+	int flag;
 
+	flag = 0;
 	status = 0;
 	child = fork();
 	if (child == 0)
@@ -55,24 +69,37 @@ int	main(void)
 	else 
 	{
 		struct user_regs_struct regs;
-		unsigned long int old;
+		struct user* user_space = (struct user*)0;
 
-		old = 0;
 		ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD);
 		while (42)
 		{
+			long rax;
+			long rdi;
+			long rsi;
+			long rdx;
+			long r10;
 			wait_for_syscall(child , &status);
 			ptrace(PTRACE_GETREGS, child , NULL, &regs);
-			if (old != regs.rip)
+			rax = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rax, NULL);
+			rdi = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rdi, NULL);
+			rsi = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rsi, NULL);
+			rdx = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rdx, NULL);
+			r10 = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.r10, NULL);
+			if (flag == 0)
 			{
+				flag = 1;
 				printf("%s(", get_syscall_name(regs.orig_rax));
-				(regs.rdi) ? (printf("%d,", (int)regs.rdi)) : 0;
-				(regs.rsi) ? (printf("%d,", (int)regs.rsi)) : 0;
-				(regs.rdx) ? (printf("%d,", (int)regs.rdx)) : 0;
-				(regs.rcx) ? (printf("%d,", (int)regs.rcx)) : 0;
-				printf(")\n");
-				old = regs.rip;
+				(rdi) ? (printf("%ld", rdi)) : printf("0");
+				(rsi) ? (printf(", %ld", rsi)) : 0;
+				(rdx) ? (printf(", %ld", rdx)) : 0;
+				(r10) ? (printf(", %ld", r10)) : 0;
+				printf(") => %ld\n", rax);
 
+			}
+			else
+			{
+				flag = 0;
 			}
 			if (WIFEXITED(status))
 				break ;
