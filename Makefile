@@ -1,10 +1,12 @@
-SRC = srcs/main.c
-SRC += srcs/syscall.c
-SRC += srcs/errno.c
+SRC = main.c
+SRC += syscall.c
+SRC += errno.c
 
 NAME = ft_strace
+SRCDIR = srcs/
+OBJDIR = objs/
+OBJ = $(addprefix $(OBJDIR), $(SRC:.c=.o))
 
-OBJ = $(SRC:.c=.o)
 
 LIB = libft/libft.a
 FLAG = -Wall -Werror -Wextra
@@ -18,9 +20,10 @@ all: start lib $(NAME)
 
 lib:
 	-@make -C libft nohd
+	@mkdir -p $(OBJDIR)
 
 $(NAME): $(OBJ)
-	@gcc -o $(NAME) $(SRC) $(FLAG) $(INC) $(LIB);
+	@gcc -o $(NAME) $(OBJ) $(FLAG) $(INC) $(LIB);
 	@echo "\033[K$(CY)[FT_STRACE] :$(CE) $(CG)Compiling ft_strace$(CE)";
 
 
@@ -35,7 +38,7 @@ start:
 	@echo "			$(CG)###            ###    ########## ########     ###     ###    ### ###     ###  ########  ##########         $(CE)";
 	@echo "\n";
 
-%.o: %.c
+$(OBJ): $(OBJDIR)%.o: $(SRCDIR)%.c
 	@echo "\033[K$(CY)[FT_STRACE] :$(CE) $(CG)Compiling $<$(CE)";
 	@gcc $(FLAG) -c $< -o $@ $(INC)
 
