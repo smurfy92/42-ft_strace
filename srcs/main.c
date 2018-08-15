@@ -30,12 +30,38 @@ int	is_print(char c)
 int	is_printable(char *str)
 {
 	int i = -1;
+
 	while (str && str[++i])
+	{
 		if  (!is_print(str[i]))
 			return (0);
+	}
 	if (i == 0)
 		return (0);
 	return (1);
+}
+
+char  *trim_back(char *str)
+{
+	char *copy;
+	char *temp;
+	int i = -1;
+
+	copy = ft_strdup(str);
+
+	while (copy && copy[++i])
+	{
+		if (copy[i] == '\n')
+		{
+			temp = &copy[i + 1];
+			copy[i] = 0;
+			copy = ft_strjoin(copy, "\\n");
+			copy = ft_strjoin(copy, temp);
+
+		}
+	}
+	return (copy);
+
 }
 
 void 	get_data(int child, long reg, int flag)
@@ -57,10 +83,10 @@ void 	get_data(int child, long reg, int flag)
 
 	if (flag)
 		printf(", ");
-	
+
 	if (!errno)
 		if (is_printable(message))
-			printf("\"%s\"", message);
+			printf("\"%s\"", trim_back(message));
 		else
 			printf("%p", message);
 	else
@@ -73,29 +99,30 @@ int	main(void)
 	pid_t			child;
 	int status;
 	int flag;
+	long rax;
+	long rdi;
+	long rsi;
+	long rdx;
+	long r10;
+	int ret;
 
+	ret = 0;
 	flag = 0;
 	status = 0;
 	child = fork();
+	ptrace(PTRACE_SEIZE, child, 0, 0);
+	ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD);
+	ptrace(PTRACE_INTERRUPT, child, 0, 0);
 	if (child == 0)
 	{
 		char * const args[] =  {NULL};
-
-		ptrace(PTRACE_TRACEME, 0 , NULL, NULL);
 		execve("./coucou", args, NULL);
 	} 
 	else 
 	{
 		struct user_regs_struct regs;
-
-		ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD);
 		while (42)
 		{
-			long rax;
-			long rdi;
-			long rsi;
-			long rdx;
-			long r10;
 			wait_for_syscall(child , &status);
 			ptrace(PTRACE_GETREGS, child , NULL, &regs);
 			if (flag == 0)
@@ -107,11 +134,11 @@ int	main(void)
 				rsi = ptrace(PTRACE_PEEKUSER, child, RSI * 8, NULL);
 				rdx = ptrace(PTRACE_PEEKUSER, child, RDX * 8, NULL);
 				r10 = ptrace(PTRACE_PEEKUSER, child, R10 * 8, NULL);
+				rax = ptrace(PTRACE_PEEKUSER, child, RAX * 8, NULL);
 				(rdi) ? (get_data(child, rdi, 0)) : printf("0");
 				(rsi) ? (get_data(child, rsi, 1)) : 0;
 				(rdx) ? (get_data(child, rdx, 1)) : 0;
 				(r10) ? (get_data(child, r10, 1)) : 0;
-				rax = ptrace(PTRACE_PEEKUSER, child, RAX * 8, NULL);
 				if (rax == -1)
 					printf(") => ?\n");
 				else if (rax < -1)
@@ -120,15 +147,17 @@ int	main(void)
 				}
 				else
 					printf(") => %ld\n", rax);
-					
+				regs.rdi = 0;
+				ptrace(PTRACE_SETREGSET, child , NULL,&regs);
 			}
 			else
 			{
 				flag = 0;
 			}
-			if (WIFEXITED(status))
+			if (ret = WIFEXITED(status))
 				break ;
 		}
+		printf("+++ exited with %d +++\n", ret);
 	}
 	return (0);
 }
