@@ -13,8 +13,8 @@
 #include "../includes/ft_strace.h"
 #include <errno.h>
 
-void	wait_for_syscall(int child, int *status){
-
+void	wait_for_syscall(int child, int *status)
+{
 	ptrace(PTRACE_SYSCALL, child, NULL, NULL);
 	waitpid(child, status, 0);
 
@@ -94,7 +94,19 @@ void 	get_data(int child, long reg, int flag)
 }
 
 
-int	main(void)
+void print_usage()
+{
+	printf("usage: ./ft_strace <PROG> args\n");
+	exit(0);
+}
+
+void	ft_exit()
+{
+	printf("toto\n");
+	exit(0);
+}
+
+int	main(int argc, char **argv)
 {
 	pid_t			child;
 	int status;
@@ -104,11 +116,15 @@ int	main(void)
 	long rsi;
 	long rdx;
 	long r10;
-	int ret;
 
-	ret = 0;
+//	sigset_t block;
+//	sigemptyset(&block);
+//	sigaddset( &block, SIGSEGV );
+//	sigprocmask(SIG_SETMASK, &block, NULL);
 	flag = 0;
 	status = 0;
+	if (argc < 2)
+		print_usage();
 	child = fork();
 	ptrace(PTRACE_SEIZE, child, 0, 0);
 	ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD);
@@ -116,7 +132,7 @@ int	main(void)
 	if (child == 0)
 	{
 		char * const args[] =  {NULL};
-		execve("./coucou", args, NULL);
+		execve(argv[1], args, NULL);
 	} 
 	else 
 	{
@@ -130,6 +146,11 @@ int	main(void)
 				flag = 1;
 				//	printf("rsi -> %ld old rsi -> %ld\n", rsi , old_rsi);
 				printf("%s(", get_syscall_name(regs.orig_rax));
+				if (regs.orig_rax == SYS_exit_group)
+				{
+					printf("%d)\n", WIFEXITED(status));
+					break ;
+				}
 				rdi = ptrace(PTRACE_PEEKUSER, child, RDI * 8, NULL);
 				rsi = ptrace(PTRACE_PEEKUSER, child, RSI * 8, NULL);
 				rdx = ptrace(PTRACE_PEEKUSER, child, RDX * 8, NULL);
@@ -154,10 +175,11 @@ int	main(void)
 			{
 				flag = 0;
 			}
-			if (ret = WIFEXITED(status))
+			signal(SIGSEGV, ft_exit);
+			if (WIFEXITED(status) || WIFSIGNALED(status))
 				break ;
 		}
-		printf("+++ exited with %d +++\n", ret);
+		printf("+++ exited with %d +++\n", WIFEXITED(status));
 	}
 	return (0);
 }
