@@ -1,5 +1,6 @@
 SRC = srcs/main.c
 SRC += srcs/syscall.c
+SRC += srcs/errno.c
 
 NAME = ft_strace
 

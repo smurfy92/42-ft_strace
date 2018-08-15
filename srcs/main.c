@@ -20,26 +20,49 @@ void	wait_for_syscall(int child, int *status){
 
 }
 
+int	is_print(char c)
+{
+	if (ft_isprint(c) || c == '\n')
+		return (1);
+	return (0);
+}
+
+int	is_printable(char *str)
+{
+	int i = -1;
+	while (str && str[++i])
+		if  (!is_print(str[i]))
+			return (0);
+	if (i == 0)
+		return (0);
+	return (1);
+}
+
 void 	get_data(int child, long reg, int flag)
 {
 	long res;
-	char message[1000];
+	char message[100000];
 	char *temp;
 	int i = -1;
 
 	temp = message;
-	while (++i < 4)
+	res = 100;
+	while (++i < 8)
 	{
 		res = ptrace(PTRACE_PEEKDATA, child, reg + i * 8, NULL);
 		ft_memcpy(temp, &res, 8);
 		temp += 8;
+		//printf("\ntemp -> %ld\n", res);
 	}
 
-	message[temp - message -1 ] = 0;
 	if (flag)
 		printf(", ");
+	
 	if (!errno)
-		printf("\"%s\"", message);
+		if (is_printable(message))
+			printf("\"%s\"", message);
+		else
+			printf("%p", message);
 	else
 		printf("%ld", reg);
 }
@@ -64,7 +87,6 @@ int	main(void)
 	else 
 	{
 		struct user_regs_struct regs;
-		struct user* user_space = (struct user*)0;
 
 		ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD);
 		while (42)
@@ -79,18 +101,26 @@ int	main(void)
 			if (flag == 0)
 			{
 				flag = 1;
-			//	printf("rsi -> %ld old rsi -> %ld\n", rsi , old_rsi);
-				rax = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rax, NULL);
+				//	printf("rsi -> %ld old rsi -> %ld\n", rsi , old_rsi);
 				printf("%s(", get_syscall_name(regs.orig_rax));
-				rdi = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rdi, NULL);
+				rdi = ptrace(PTRACE_PEEKUSER, child, RDI * 8, NULL);
+				rsi = ptrace(PTRACE_PEEKUSER, child, RSI * 8, NULL);
+				rdx = ptrace(PTRACE_PEEKUSER, child, RDX * 8, NULL);
+				r10 = ptrace(PTRACE_PEEKUSER, child, R10 * 8, NULL);
 				(rdi) ? (get_data(child, rdi, 0)) : printf("0");
-				rsi = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rsi, NULL);
 				(rsi) ? (get_data(child, rsi, 1)) : 0;
-				rdx = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.rdx, NULL);
 				(rdx) ? (get_data(child, rdx, 1)) : 0;
-				r10 = ptrace(PTRACE_PEEKUSER, child, &user_space->regs.r10, NULL);
 				(r10) ? (get_data(child, r10, 1)) : 0;
-				printf(") => %ld\n", rax);
+				rax = ptrace(PTRACE_PEEKUSER, child, RAX * 8, NULL);
+				if (rax == -1)
+					printf(") => ?\n");
+				else if (rax < -1)
+				{
+					printf(") => -1 %s\n", get_errno_name(rax));
+				}
+				else
+					printf(") => %ld\n", rax);
+					
 			}
 			else
 			{
