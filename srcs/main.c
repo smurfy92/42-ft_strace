@@ -114,27 +114,6 @@ void print_usage()
 	exit(0);
 }
 
-void	ft_exit(int sig)
-{
-	if (WIFEXITED(status)) {
-		printf("+++ exited with %d +++\n", WEXITSTATUS(status));
-		exit(0) ;
-	} else if (WIFSIGNALED(status)) {
-		printf("+++ killed by %d\n", WTERMSIG(status));
-		exit(0) ;
-	}else if (WIFCONTINUED(status)) {
-		printf("continued\n");
-		exit(0) ;
-	}else if (WIFSTOPPED(status)){
-		printf("stopped");
-	}
-	printf("sig -> %d\n", sig);
-	printf("status ->%d\n", status);
-	printf("toto\n");
-	exit(0);
-}
-
-
 int	main(int argc, char **argv)
 {
 	pid_t			child;
@@ -156,19 +135,26 @@ int	main(int argc, char **argv)
 	} 
 	else 
 	{
-		//	signal(SIGCHLD,ft_exit);
 		struct user_regs_struct regs;
 		ptrace(PTRACE_SEIZE, child, 0, 0);
 		ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEEXEC | PTRACE_O_TRACEEXIT);
 		ptrace(PTRACE_INTERRUPT, child, 0, 0);
 		while (42)
 		{
+			if (WSTOPSIG(status) == SIGWINCH)
+				ptrace(PTRACE_CONT, child, NULL, NULL);
 			wait_for_syscall(child);
 			if (WIFEXITED(status))
 				break ;
 			else if (WIFSTOPPED(status))
+			{
 				if (WSTOPSIG(status) != SIGTRAP)
-					break;
+				{
+					printf("--- %s---\n", get_signal_name(WSTOPSIG(status)));
+					if (WSTOPSIG(status) != SIGWINCH)
+						break;
+				}
+			}
 			ptrace(PTRACE_GETREGS, child , NULL, &regs);
 			if (flag == 0)
 			{
@@ -213,8 +199,8 @@ int	main(int argc, char **argv)
 			printf("+++ exited with %d +++\n", WEXITSTATUS(status));
 		else if (WIFSTOPPED(status))
 		{
-			printf("--- %s---\n", get_signal_name(WSTOPSIG(status)));
-			printf("+++ exited with %s +++\n", get_signal_name(WSTOPSIG(status)));
+			printf("+++ killed by %s +++\n", get_signal_name(WSTOPSIG(status)));
+			printf("%s\n", sys_siglist[WSTOPSIG(status)]);
 		}
 	}
 	return (0);
