@@ -123,6 +123,7 @@ int	main(int argc, char **argv)
 	long rsi;
 	long rdx;
 	long r10;
+	long orig_rax;
 
 	flag = 0;
 	if (argc < 2)
@@ -135,14 +136,13 @@ int	main(int argc, char **argv)
 	} 
 	else 
 	{
-		struct user_regs_struct regs;
 		ptrace(PTRACE_SEIZE, child, 0, 0);
 		ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEEXEC | PTRACE_O_TRACEEXIT);
 		ptrace(PTRACE_INTERRUPT, child, 0, 0);
 		while (42)
 		{
 			if (WSTOPSIG(status) == SIGWINCH)
-				ptrace(PTRACE_CONT, child, NULL, NULL);
+				ptrace(PTRACE_CONT, child, 0, 0);
 			wait_for_syscall(child);
 			if (WIFEXITED(status))
 				break ;
@@ -155,15 +155,20 @@ int	main(int argc, char **argv)
 						break;
 				}
 			}
-			ptrace(PTRACE_GETREGS, child , NULL, &regs);
 			if (flag == 0)
 			{
+			orig_rax = ptrace(PTRACE_PEEKUSER, child, ORIG_RAX * 8, NULL);
+			rdi = ptrace(PTRACE_PEEKUSER, child, RDI * 8, NULL);
+			rsi = ptrace(PTRACE_PEEKUSER, child, RSI * 8, NULL);
+			rdx = ptrace(PTRACE_PEEKUSER, child, RDX * 8, NULL);
+			r10 = ptrace(PTRACE_PEEKUSER, child, R10 * 8, NULL);
+				rax = ptrace(PTRACE_PEEKUSER, child, RAX * 8, NULL);
 				flag = 1;
 				//	printf("rsi -> %ld old rsi -> %ld\n", rsi , old_rsi);
-				if (regs.orig_rax == SYS_clone)
+				if (orig_rax == SYS_clone)
 					continue ;
-				printf("%s(", get_syscall_name(regs.orig_rax));
-				if (regs.orig_rax == SYS_exit_group)
+				printf("%s(", get_syscall_name(orig_rax));
+				if (orig_rax == SYS_exit_group)
 				{
 					if (WIFEXITED(status))
 						printf("%d)\n", WEXITSTATUS(status));
@@ -171,29 +176,20 @@ int	main(int argc, char **argv)
 						printf("%d)\n", WIFEXITED(status));
 					break ;
 				}
-				rdi = ptrace(PTRACE_PEEKUSER, child, RDI * 8, NULL);
-				rsi = ptrace(PTRACE_PEEKUSER, child, RSI * 8, NULL);
-				rdx = ptrace(PTRACE_PEEKUSER, child, RDX * 8, NULL);
-				r10 = ptrace(PTRACE_PEEKUSER, child, R10 * 8, NULL);
-				rax = ptrace(PTRACE_PEEKUSER, child, RAX * 8, NULL);
 				(rdi) ? (get_data(child, rdi, 0)) : printf("0");
 				(rsi) ? (get_data(child, rsi, 1)) : 0;
 				(rdx) ? (get_data(child, rdx, 1)) : 0;
 				(r10) ? (get_data(child, r10, 1)) : 0;
 				//printf("rax -> %ld\n", rax);
 				if (rax == -1)
-					printf(") => ?\n");
+					printf(") = ?\n");
 				else if (rax < -1)
-				{
-					printf(") => -1 %s\n", get_errno_name(rax));
-				}
+					printf(") = -1 %s\n", get_errno_name(rax));
 				else
-					printf(") => %ld\n", rax);
+					printf(") = %ld\n", rax);
 			}
 			else
-			{
 				flag = 0;
-			}
 		}
 		if (WIFEXITED(status))
 			printf("+++ exited with %d +++\n", WEXITSTATUS(status));
