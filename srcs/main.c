@@ -13,10 +13,24 @@
 #include "../includes/ft_strace.h"
 #include <errno.h>
 
-void	wait_for_syscall(int child, int *status)
+int	status;
+
+void	wait_for_syscall(int child)
 {
+	sigset_t block;
+	sigset_t empty;
+
+	sigemptyset(&block);
+	sigemptyset(&empty);
 	ptrace(PTRACE_SYSCALL, child, NULL, NULL);
-	waitpid(child, status, 0);
+	waitpid(child, &status, WCONTINUED );
+	sigprocmask(SIG_SETMASK, &empty, NULL);
+	sigaddset( &block, SIGINT );
+	sigaddset( &block, SIGHUP );
+	sigaddset( &block, SIGQUIT );
+	sigaddset( &block, SIGPIPE );
+	sigaddset( &block, SIGTERM );
+	sigprocmask(SIG_BLOCK, &block, NULL);
 
 }
 
@@ -100,16 +114,30 @@ void print_usage()
 	exit(0);
 }
 
-void	ft_exit()
+void	ft_exit(int sig)
 {
+	if (WIFEXITED(status)) {
+		printf("+++ exited with %d +++\n", WEXITSTATUS(status));
+		exit(0) ;
+	} else if (WIFSIGNALED(status)) {
+		printf("+++ killed by %d\n", WTERMSIG(status));
+		exit(0) ;
+	}else if (WIFCONTINUED(status)) {
+		printf("continued\n");
+		exit(0) ;
+	}else if (WIFSTOPPED(status)){
+		printf("stopped");
+	}
+	printf("sig -> %d\n", sig);
+	printf("status ->%d\n", status);
 	printf("toto\n");
 	exit(0);
 }
 
+
 int	main(int argc, char **argv)
 {
 	pid_t			child;
-	int status;
 	int flag;
 	long rax;
 	long rdi;
@@ -117,18 +145,10 @@ int	main(int argc, char **argv)
 	long rdx;
 	long r10;
 
-//	sigset_t block;
-//	sigemptyset(&block);
-//	sigaddset( &block, SIGSEGV );
-//	sigprocmask(SIG_SETMASK, &block, NULL);
 	flag = 0;
-	status = 0;
 	if (argc < 2)
 		print_usage();
 	child = fork();
-	ptrace(PTRACE_SEIZE, child, 0, 0);
-	ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD);
-	ptrace(PTRACE_INTERRUPT, child, 0, 0);
 	if (child == 0)
 	{
 		char * const args[] =  {NULL};
@@ -136,19 +156,33 @@ int	main(int argc, char **argv)
 	} 
 	else 
 	{
+		//	signal(SIGCHLD,ft_exit);
 		struct user_regs_struct regs;
+		ptrace(PTRACE_SEIZE, child, 0, 0);
+		ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEEXEC | PTRACE_O_TRACEEXIT);
+		ptrace(PTRACE_INTERRUPT, child, 0, 0);
 		while (42)
 		{
-			wait_for_syscall(child , &status);
+			wait_for_syscall(child);
+			if (WIFEXITED(status))
+				break ;
+			else if (WIFSTOPPED(status))
+				if (WSTOPSIG(status) != SIGTRAP)
+					break;
 			ptrace(PTRACE_GETREGS, child , NULL, &regs);
 			if (flag == 0)
 			{
 				flag = 1;
 				//	printf("rsi -> %ld old rsi -> %ld\n", rsi , old_rsi);
+				if (regs.orig_rax == SYS_clone)
+					continue ;
 				printf("%s(", get_syscall_name(regs.orig_rax));
 				if (regs.orig_rax == SYS_exit_group)
 				{
-					printf("%d)\n", WIFEXITED(status));
+					if (WIFEXITED(status))
+						printf("%d)\n", WEXITSTATUS(status));
+					else
+						printf("%d)\n", WIFEXITED(status));
 					break ;
 				}
 				rdi = ptrace(PTRACE_PEEKUSER, child, RDI * 8, NULL);
@@ -160,6 +194,7 @@ int	main(int argc, char **argv)
 				(rsi) ? (get_data(child, rsi, 1)) : 0;
 				(rdx) ? (get_data(child, rdx, 1)) : 0;
 				(r10) ? (get_data(child, r10, 1)) : 0;
+				//printf("rax -> %ld\n", rax);
 				if (rax == -1)
 					printf(") => ?\n");
 				else if (rax < -1)
@@ -168,18 +203,19 @@ int	main(int argc, char **argv)
 				}
 				else
 					printf(") => %ld\n", rax);
-				regs.rdi = 0;
-				ptrace(PTRACE_SETREGSET, child , NULL,&regs);
 			}
 			else
 			{
 				flag = 0;
 			}
-			signal(SIGSEGV, ft_exit);
-			if (WIFEXITED(status) || WIFSIGNALED(status))
-				break ;
 		}
-		printf("+++ exited with %d +++\n", WIFEXITED(status));
+		if (WIFEXITED(status))
+			printf("+++ exited with %d +++\n", WEXITSTATUS(status));
+		else if (WIFSTOPPED(status))
+		{
+			printf("--- %s---\n", get_signal_name(WSTOPSIG(status)));
+			printf("+++ exited with %s +++\n", get_signal_name(WSTOPSIG(status)));
+		}
 	}
 	return (0);
 }

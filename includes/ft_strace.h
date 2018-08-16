@@ -12,3 +12,4 @@
 
 char *get_errno_name(int key);
 char *get_syscall_name(int key);
+char *get_signal_name(int key);

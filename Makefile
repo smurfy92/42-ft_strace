@@ -1,6 +1,7 @@
 SRC = main.c
 SRC += syscall.c
 SRC += errno.c
+SRC += signal.c
 
 NAME = ft_strace
 SRCDIR = srcs/
