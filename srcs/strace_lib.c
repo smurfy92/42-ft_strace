@@ -62,7 +62,7 @@ void print_usage()
 	exit(0);
 }
 
-void	wait_for_syscall(int child)
+void	wait_for_syscall()
 {
 	sigset_t block;
 	sigset_t empty;

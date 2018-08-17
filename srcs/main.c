@@ -13,6 +13,7 @@
 #include "../includes/ft_strace.h"
 
 int	status;
+int child;
 
 int sigs()
 {
@@ -31,7 +32,7 @@ int sigs()
 	return (0);
 }
 
-void	get_sys_ret(int child)
+void	get_sys_ret()
 {
 	long rax;
 
@@ -45,7 +46,7 @@ void	get_sys_ret(int child)
 		printf(") = %ld\n", rax);
 }
 
-void get_regs(int child)
+void get_regs()
 {
 	long regs[6];
 
@@ -68,25 +69,22 @@ void get_regs(int child)
 		(regs[1]) ? (get_data(child, regs[1], 1)) : 0;
 		(regs[2]) ? (get_data(child, regs[2], 1)) : 0;
 		(regs[3]) ? (get_data(child, regs[3], 1)) : 0;
-		get_sys_ret(child);
+		get_sys_ret();
 	}
 }
 
-void		process(int child)
+void		process()
 {
 	while (42)
 	{
 		wait_for_syscall(child);
-		sigs();
+		sigs(child);
 		get_regs(child);
 	}
 }
 
 int	main(int argc, char **argv)
 {
-	pid_t			child;
-	
-
 	if (argc < 2)
 		print_usage();
 	child = fork();
@@ -100,7 +98,7 @@ int	main(int argc, char **argv)
 		ptrace(PTRACE_SEIZE, child, 0, 0);
 		ptrace(PTRACE_SYSCALL, child, 0, 0);
 		ptrace(PTRACE_INTERRUPT, child, 0, 0);
-		process(child);
+		process();
 		get_ret();
 	}
 	return (0);

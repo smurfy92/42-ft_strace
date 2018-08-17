@@ -23,7 +23,7 @@ void	get_ret()
 	}
 }
 
-void 	get_data(int child, long reg, int flag)
+void 	get_data(long reg, int flag)
 {
 	long res;
 	char message[100000];
