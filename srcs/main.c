@@ -82,16 +82,56 @@ void		process()
 	}
 }
 
-int	main(int argc, char **argv)
+char	*check_file(char **argv, char **env)
 {
+	struct stat *buf =  {NULL};
+	char **temp;
+	char **temp2;
+
+	if (argv[1][0] && argv[1][1] && argv[1][0] == '.' && argv[1][1] == '/')
+	{
+		if (lstat(argv[1], buf) == -1)
+		{
+			printf("stat : %s\n", strerror(errno));
+			exit(-1);
+		}
+	}else
+	{
+		int i = -1;
+		while (env[++i])
+		{
+			temp = ft_strsplit(env[i], '=');
+			if (ft_strequ(temp[0], "PATH") == 1)
+			{
+				printf("PATH -> found\n");
+				int y = -1;
+				temp2 = ft_strsplit(temp[1], ':');
+				while (temp2[++y])
+				{
+					printf("checking before -> %s\n", temp2[y]);
+					temp2[y] = ft_strjoin(temp2[y], "/");
+					temp2[y] = ft_strjoin(temp2[y], argv[1]);
+					printf("checking after -> %s\n", temp2[y]);
+					if (lstat(temp2[y], buf) == 0)
+						return (temp2[y]);
+				}
+			}
+		}
+	}
+	return (argv[1]);
+}
+
+int	main(int argc, char **argv, char **env)
+{
+	char * const args[] =  {NULL};
+	char *file;
+
 	if (argc < 2)
 		print_usage();
+	file = check_file(argv, env);
 	child = fork();
 	if (child == 0)
-	{
-		char * const args[] =  {NULL};
-		execve(argv[1], args, NULL);
-	} 
+		execve(file, args, NULL);
 	else 
 	{
 		ptrace(PTRACE_SEIZE, child, 0, 0);

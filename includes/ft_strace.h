@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <sys/reg.h>
 #include <sys/syscall.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
