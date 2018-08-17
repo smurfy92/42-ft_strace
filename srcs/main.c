@@ -75,9 +75,10 @@ void		process()
 {
 	while (42)
 	{
-		wait_for_syscall(child);
-		sigs(child);
-		get_regs(child);
+		wait_for_syscall();
+		if (sigs())
+			break ;
+		get_regs();
 	}
 }
 
