@@ -31,7 +31,7 @@ int sigs()
 	return (0);
 }
 
-void	get_sys_ret()
+void	get_sys_ret(int child)
 {
 	long rax;
 
@@ -68,7 +68,7 @@ void get_regs(int child)
 		(regs[1]) ? (get_data(child, regs[1], 1)) : 0;
 		(regs[2]) ? (get_data(child, regs[2], 1)) : 0;
 		(regs[3]) ? (get_data(child, regs[3], 1)) : 0;
-		get_sys_ret();
+		get_sys_ret(child);
 	}
 }
 
@@ -101,8 +101,7 @@ int	main(int argc, char **argv)
 		ptrace(PTRACE_SYSCALL, child, 0, 0);
 		ptrace(PTRACE_INTERRUPT, child, 0, 0);
 		process(child);
-		get_ret()
-		
+		get_ret();
 	}
 	return (0);
 }
