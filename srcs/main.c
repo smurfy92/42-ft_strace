@@ -84,13 +84,12 @@ void		process()
 
 char	*check_file(char **argv, char **env)
 {
-	struct stat *buf =  {NULL};
 	char **temp;
 	char **temp2;
 
 	if (argv[1][0] && argv[1][1] && argv[1][0] == '.' && argv[1][1] == '/')
 	{
-		if (lstat(argv[1], buf) == -1)
+		if (access(argv[1], F_OK) == -1)
 		{
 			printf("stat : %s\n", strerror(errno));
 			exit(-1);
@@ -103,7 +102,6 @@ char	*check_file(char **argv, char **env)
 			temp = ft_strsplit(env[i], '=');
 			if (ft_strequ(temp[0], "PATH") == 1)
 			{
-				printf("PATH -> found\n");
 				int y = -1;
 				temp2 = ft_strsplit(temp[1], ':');
 				while (temp2[++y])
@@ -112,8 +110,10 @@ char	*check_file(char **argv, char **env)
 					temp2[y] = ft_strjoin(temp2[y], "/");
 					temp2[y] = ft_strjoin(temp2[y], argv[1]);
 					printf("checking after -> %s\n", temp2[y]);
-					if (lstat(temp2[y], buf) == 0)
+					if (access(temp2[y], F_OK) == 0)
+					{
 						return (temp2[y]);
+					}
 				}
 			}
 		}
