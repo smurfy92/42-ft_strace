@@ -12,8 +12,6 @@
 
 #include "../includes/ft_strace.h"
 
-int	status;
-int child;
 
 int sigs()
 {
@@ -36,7 +34,7 @@ void	get_sys_ret()
 {
 	long rax;
 
-	wait_for_syscall(child);
+	wait_for_syscall();
 	rax = ptrace(PTRACE_PEEKUSER, child, RAX * 8, NULL);
 	if (rax == -1)
 		printf(") = ?\n");
@@ -60,15 +58,15 @@ void get_regs()
 	printf("%s(", get_syscall_name(regs[4]));
 	if (regs[4] == SYS_exit_group)
 	{
-		(regs[0]) ? (get_data(child, regs[0], 0)) : printf("0");
+		(regs[0]) ? (get_data(regs[0], 0)) : printf("0");
 		printf(") = ?\n");
 	}
 	else
 	{
-		(regs[0]) ? (get_data(child, regs[0], 0)) : printf("0");
-		(regs[1]) ? (get_data(child, regs[1], 1)) : 0;
-		(regs[2]) ? (get_data(child, regs[2], 1)) : 0;
-		(regs[3]) ? (get_data(child, regs[3], 1)) : 0;
+		(regs[0]) ? (get_data(regs[0], 0)) : printf("0");
+		(regs[1]) ? (get_data(regs[1], 1)) : 0;
+		(regs[2]) ? (get_data(regs[2], 1)) : 0;
+		(regs[3]) ? (get_data(regs[3], 1)) : 0;
 		get_sys_ret();
 	}
 }
