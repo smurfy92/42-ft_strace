@@ -13,7 +13,8 @@ int main(int argc, char *argv[]) {
 	sigaddset(&set, 63);
 	sigaddset(&set, 64);
 	sigprocmask(SIG_BLOCK, &set, NULL);
-	signal(SIGWINCH, null_handler);
-	raise(SIGWINCH);
+	signal(SIGINT, null_handler);
+	raise(SIGINT);
+	write(1, "toto\n", 5);
 	return 0;
 }

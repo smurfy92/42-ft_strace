@@ -405,7 +405,7 @@ char *get_syscall_name(int key)
 		case (SYS_rt_sigpending):
 			return "rt_sigpending";
 		case (SYS_rt_sigprocmask):
-			return "r_tsigprocmask";
+			return "rt_sigprocmask";
 		case (SYS_rt_sigqueueinfo):
 			return "rt_sigqueueinfo";
 		case (SYS_rt_sigreturn):
