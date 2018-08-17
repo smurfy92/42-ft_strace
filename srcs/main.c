@@ -6,40 +6,13 @@
 /*   By: jtranchi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/08/10 11:16:30 by jtranchi          #+#    #+#             */
-/*   Updated: 2018/08/17 15:35:42 by jtranchi         ###   ########.fr       */
+/*   Updated: 2018/08/10 11:16:32 by jtranchi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/ft_strace.h"
 
 int	status;
-
-void 	get_data(int child, long reg, int flag)
-{
-	long res;
-	char message[100000];
-	char *temp;
-	int i = -1;
-
-	temp = message;
-	res = 100;
-	while (++i < 8)
-	{
-		res = ptrace(PTRACE_PEEKDATA, child, reg + i * 8, NULL);
-		ft_memcpy(temp, &res, 8);
-		temp += 8;
-	}
-	if (flag)
-		printf(", ");
-	if (!errno)
-		if (is_printable(message))
-			printf("\"%s\"", trim_back(message));
-		else
-			printf("%p", message);
-	else
-		printf("%ld", reg);
-}
-
 
 int sigs()
 {
@@ -106,17 +79,6 @@ void		process(int child)
 		wait_for_syscall(child);
 		sigs();
 		get_regs(child);
-	}
-}
-
-void	get_ret()
-{
-	if (WIFEXITED(status))
-		printf("+++ exited with %d +++\n", WEXITSTATUS(status));
-	else if (WIFSTOPPED(status))
-	{
-		printf("+++ killed by %s +++\n", get_signal_name(WSTOPSIG(status)));
-		printf("%s\n", sys_siglist[WSTOPSIG(status)]);
 	}
 }
 
