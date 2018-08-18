@@ -24,7 +24,8 @@ int sigs()
 			printf("--- %s---\n", get_signal_name(WSTOPSIG(status)));
 			if (WSTOPSIG(status) == SIGSEGV)
 				return (1);
-			ptrace(PTRACE_INTERRUPT, child , 0, 0);
+			//ptrace(PTRACE_INTERRUPT, child , 0, 0);
+			wait_for_syscall();
 		}
 	}
 	return (0);
@@ -46,7 +47,7 @@ void	get_sys_ret()
 
 void get_regs()
 {
-	long regs[6];
+	long regs[6] = {0};
 
 	regs[0] = ptrace(PTRACE_PEEKUSER, child, RDI * 8, NULL);
 	regs[1] = ptrace(PTRACE_PEEKUSER, child, RSI * 8, NULL);
@@ -106,10 +107,8 @@ char	*check_file(char **argv, char **env)
 				temp2 = ft_strsplit(temp[1], ':');
 				while (temp2[++y])
 				{
-					printf("checking before -> %s\n", temp2[y]);
 					temp2[y] = ft_strjoin(temp2[y], "/");
 					temp2[y] = ft_strjoin(temp2[y], argv[1]);
-					printf("checking after -> %s\n", temp2[y]);
 					if (access(temp2[y], F_OK) == 0)
 					{
 						return (temp2[y]);
@@ -123,15 +122,17 @@ char	*check_file(char **argv, char **env)
 
 int	main(int argc, char **argv, char **env)
 {
-	char * const args[] =  {NULL};
+	char *args[2] =  {NULL};
 	char *file;
 
 	if (argc < 2)
 		print_usage();
 	file = check_file(argv, env);
+	args[0] = argv[1];
+	args[1] = NULL;
 	child = fork();
 	if (child == 0)
-		execve(file, args, NULL);
+		execve(file, args, env);
 	else 
 	{
 		ptrace(PTRACE_SEIZE, child, 0, 0);
